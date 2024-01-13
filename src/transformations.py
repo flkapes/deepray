@@ -1,15 +1,16 @@
+import remove_labels
+
 import silence_tensorflow.auto
 import PIL
 import tensorflow as tf
-import cv2
-import remove_labels
-import numpy as np
 from PIL import Image
+import numpy as np
+import cv2
 
 process_image = remove_labels.process_image
 
 
-def histogram_equalization(image):
+def apply_histogram_equalization(image: np.ndarray) -> np.ndarray:
     """Applies histogram equalization on an image.
 
     Args:
@@ -23,7 +24,7 @@ def histogram_equalization(image):
     return cv2.cvtColor(img_equalized, cv2.COLOR_GRAY2RGB)
 
 
-def contrast_limited_histogram_equalization(image):
+def apply_contrast_limited_histogram_equalization(image: np.ndarray) -> np.ndarray:
     """Applies contrast limited adaptive histogram equalization (CLAHE) on an image.
 
     Args:
@@ -38,7 +39,7 @@ def contrast_limited_histogram_equalization(image):
     return cv2.cvtColor(img_ahe, cv2.COLOR_GRAY2RGB)
 
 
-def gamma_correction(image, gamma=1.0):
+def apply_gamma_correction(image: np.ndarray, gamma: float = 1.0) -> np.ndarray:
     """Applies gamma correction on an image.
 
     Args:
@@ -55,7 +56,7 @@ def gamma_correction(image, gamma=1.0):
     return cv2.LUT(np.asarray(image * 255).astype("uint8"), table)
 
 
-def median_filtering(image, ksize=3):
+def apply_median_filtering(image: np.ndarray, ksize: int = 3):
     """Applies median filtering on an image.
 
     Args:
@@ -70,7 +71,7 @@ def median_filtering(image, ksize=3):
     return cv2.cvtColor(img_median, cv2.COLOR_GRAY2RGB)
 
 
-def gaussian_filtering(image, ksize=(1, 1), sigmaX=3):
+def apply_gaussian_filtering(image, ksize=(1, 1), sigmaX=3):
     """Applies Gaussian filtering on an image.
 
     Args:
@@ -86,7 +87,7 @@ def gaussian_filtering(image, ksize=(1, 1), sigmaX=3):
     return cv2.cvtColor(img_gaussian, cv2.COLOR_GRAY2RGB)
 
 
-def resize(image, image_size=384):
+def apply_resize(image, image_size=384):
     """
     Resizes a given RGB image.
 
@@ -100,7 +101,7 @@ def resize(image, image_size=384):
     return cv2.resize(np.asarray(image).astype("uint8"), (image_size, image_size))
 
 
-def preprocess(img):
+def preprocess(img: PIL.Image) -> np.ndarray:
     """Applies preprocessing steps to the input image.
 
     Args:
@@ -112,13 +113,13 @@ def preprocess(img):
     """
     x = process_image(np.asarray(img).astype("uint8"), True)
     # Apply Gaussian filtering
-    x = gaussian_filtering(x)
+    x = apply_gaussian_filtering(x)
     # Apply preprocessing for InceptionV3 model
     x = tf.keras.applications.inception_v3.preprocess_input(x)
     return x
 
 
-def transform_all(image, ahe):
+def transform_all(image: PIL.Image, ahe: bool = True) -> np.ndarray:
     """Applies a series of image transformations to the input image.
 
     Args:
@@ -131,21 +132,21 @@ def transform_all(image, ahe):
     """
     if ahe:
         # Apply gamma correction
-        image = gamma_correction(image, gamma=1.0)
+        image = apply_gamma_correction(image, gamma=1.0)
         # Apply Gaussian filtering
-        image = gaussian_filtering(image)
+        image = apply_gaussian_filtering(image)
         # Apply histogram equalization
-        image = histogram_equalization(image)
+        image = apply_histogram_equalization(image)
     else:
         # Apply gamma correction
-        image = gamma_correction(image, gamma=0.4)
+        image = apply_gamma_correction(image, gamma=0.4)
         # Apply contrast-limited AHE
-        image = contrast_limited_histogram_equalization(image)
+        image = apply_contrast_limited_histogram_equalization(image)
 
     return np.asarray(image).astype("uint8")
 
 
-def apply_transformations(image, headless=True):
+def apply_transformations(image: PIL.Image, headless: bool = True) -> np.ndarray:
     """Applies image transformations and preprocessing steps to the input image.
 
     Args:

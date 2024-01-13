@@ -41,7 +41,6 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     body_part = PARAMS["body_part"]
     model_str = PARAMS["model"]
     checkpoint_save_path = PARAMS["checkpoint_save_path"]
-    docker = PARAMS["docker"]
 
     # Define paths for training, evaluation, and checkpoint directories
     if train_dir is not None and eval_dir is not None:
@@ -68,8 +67,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     # Get the configured model
     model = get_configured_model(
         PARAMS["model"],
-        uncropped_image=PARAMS["pre_size"],
-        crop_layer=PARAMS["crop_size"],
+        image_size=PARAMS["image_size"],
         trainable_layers=PARAMS["fine_tune"],
         regularizer="l1_l2",
     )
@@ -145,7 +143,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             train_dir,
             PARAMS["train_batch_size"],
             PARAMS["pre_size"],
-            PARAMS["crop_size"],
+            PARAMS["image_size"],
         )
         valid_dataset = create_dataset(
             "valid",
@@ -156,7 +154,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             train_dir,
             PARAMS["valid_batch_size"],
             PARAMS["pre_size"],
-            PARAMS["crop_size"],
+            PARAMS["image_size"],
         )
 
         history = model.fit(
@@ -199,7 +197,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             eval_dir,
             PARAMS["eval_batch_size"],
             PARAMS["pre_size"],
-            PARAMS["crop_size"],
+            PARAMS["image_size"],
         )
         eval = model.evaluate(eval_dataset, verbose=2)
         print(eval)
@@ -301,23 +299,11 @@ if __name__ == "__main__":
     )
     training.add_argument(
         "-H",
-        "--input-size",
+        "--image-size",
         action="store",
         type=int,
         default=324,
         help="The image input size for the model. ",
-    )
-    training.add_argument(
-        "-L",
-        "--crop-size",
-        action="store",
-        type=int,
-        default=324,
-        help=(
-            "The final image size being fed into the model. If input-size and crop-size"
-            " are the same, no crop is applied, otherwise the model will be built to"
-            " accept the crop size value set here."
-        ),
     )
     training.add_argument(
         "-m",
@@ -377,10 +363,9 @@ if __name__ == "__main__":
             "body_part": parsed.body_part.strip(),
             "checkpoint_save_path": "checkpoints/",
             "patience": parsed.patience,
-            "pre_size": parsed.input_size,
             "model": parsed.model.strip(),
             "seed": parsed.seed,
-            "crop_size": parsed.crop_size,
+            "image_size": parsed.image_size,
             "docker": parsed.docker,
             "weights": parsed.weights.strip(),
             "fine_tune": parsed.trainable_layers,

@@ -5,6 +5,7 @@ import os
 import re
 from pathlib import Path
 import warnings
+from exceptions import *
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -91,3 +92,37 @@ def set_device():
         tf.config.set_visible_devices([], "TPU")
         tf.config.set_visible_devices(tf.config.list_physical_devices("CPU"), "CPU")
         return "float32"
+
+
+def check_dropout_range(dropout):
+    if not 0 <= dropout <= 1:
+        raise InvalidDropoutRateException("Dropout rate must be between 0 and 1.")
+    return dropout
+
+def check_regularizer(regularizer):
+    valid_regularizers = ["l1", "l2", "l1_l2"]
+    if regularizer not in valid_regularizers:
+        raise InvalidRegularizerException("Invalid regularization technique. Please choose from: " + ", ".join(valid_regularizers))
+    return regularizer
+
+def check_seed_value(seed):
+    if not isinstance(seed, int):
+        raise InvalidSeedValueException("Seed value must be an integer.")
+    return seed
+
+def check_trainable_layers(trainable_layers):
+    if not isinstance(trainable_layers, int):
+        raise InvalidTrainableLayersException("Trainable layers must be an integer.")
+    return trainable_layers
+
+def check_image_size(image_size):
+    if not isinstance(image_size, int):
+        raise InvalidImageSizeException("Image size must be an integer.")
+    if not 0 <= image_size <= 1024:
+        raise InvalidImageSizeException("Image size must be between 0 and 1024.")
+    return image_size
+
+def check_model_name(model_name, model_dict):
+    if model_name not in model_dict():
+        raise ModelNotFoundException("Model not found. Please choose from: " + ", ".join(model_dict()))
+    return model_name

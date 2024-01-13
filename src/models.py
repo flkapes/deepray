@@ -1,9 +1,22 @@
+import logging
+from typing import Optional
+import time
+
 import silence_tensorflow.auto
 import tensorflow as tf
-import time
 import tensorflow.keras.applications as models
 from tensorflow.keras.layers import Dense, CenterCrop, Dropout, LeakyReLU
+from tensorflow.keras.initializers import GlorotUniform
 from tensorflow.keras import Sequential
+
+from utils import (
+    check_model_name,
+    check_dropout_range,
+    check_image_size,
+    check_regularizer,
+    check_seed_value,
+    check_trainable_layers,
+)
 
 # Dictionary that maps model names to their corresponding Keras model classes
 model_classes = {
@@ -18,13 +31,11 @@ model_classes = {
     "vgg19": models.vgg19.VGG19,
     "inceptionv3": models.InceptionV3,
     "inception_resnetv2": models.inception_resnet_v2.InceptionResNetV2,
-    "resnet101v2": models.resnet_v2.ResNet101V2,
-    "resnet152v2": models.resnet_v2.ResNet152V2,
     "xception": models.xception.Xception,
 }
 
 
-def get_model(model_name: str):
+def get_model(model_name: str) -> tf.keras.Model:
     """Return the Keras model for a given model name.
 
     Args:
@@ -33,7 +44,7 @@ def get_model(model_name: str):
     Returns:
         tf.keras.Model: The Keras model object for the specified model name.
     """
-    return model_classes[model_name.strip().lower()]
+    return model_classes[check_model_name(model_name, list_models).strip().lower()]
 
 
 def list_models() -> list:
@@ -46,21 +57,20 @@ def list_models() -> list:
 
 
 def get_configured_model(
-    model_name,
-    uncropped_image=324,
-    crop_layer=324,
-    dropout=0.4,
-    seed=None,
-    trainable_layers=0,
-    regularizer="l2",
-):
+    model_name: str,
+    image_size: int = 324,
+    dropout: float = 0.3,
+    seed: Optional[int] = None,
+    trainable_layers: int = 0,
+    regularizer: str = "l2",
+) -> tf.keras.Model:
     """Return a compiled and configured instance of a Keras model.
 
     Args:
         model_name (str): The name of the Keras model to use.
-        uncropped_image (int, optional): The size of the input image. Defaults to 384.
-        crop_layer (int, optional): The size of the crop layer to use for model training. Defaults to 384.
-        dropout (float, optional): The proportion of units to drop during training. Defaults to 0.4.
+        uncropped_image (int, optional): The size of the input image. Defaults to 324.
+        crop_layer (int, optional): The size of the crop layer to use for model training. Defaults to 324.
+        dropout (float, optional): The proportion of units to drop during training. Defaults to 0.3.
         seed (int, optional): The random seed to use for model initialization. Defaults to None.
         trainable_layers (int, optional): The number of fine-tuneable layers to use during training.
         regularizer (str, optional): The regularization technique to use. Defaults to "l2".
@@ -68,38 +78,40 @@ def get_configured_model(
     Returns:
         tf.keras.Model: The compiled and configured instance of the specified Keras model.
     """
-    resized_image = uncropped_image
     retrieved_class = get_model(model_name)
     model_base = retrieved_class(
         weights="imagenet",
-        input_shape=(crop_layer, crop_layer, 3),
+        input_shape=(check_image_size(image_size), check_image_size(image_size), 3),
         include_top=False,
         pooling="avg",
     )
 
     model_base.trainable = False
-    initializer = tf.keras.initializers.GlorotUniform(
-        seed=int(time.time()) if seed is None else seed
+    initializer = GlorotUniform(
+        seed=int(time.time()) if seed is None else check_seed_value(seed)
     )
-    if trainable_layers != 0:
-        if trainable_layers < 0:
-            trainable_layers *= -1
-        print("Found trainable layers " + str(trainable_layers))
-        for layer in model_base.layers[-(trainable_layers):]:
-            layer.trainable = True
+
+    trainable_layers = abs(check_trainable_layers(trainable_layers))
+    logging.info("Found trainable layers %s", trainable_layers)
+    for layer in model_base.layers[-trainable_layers:]:
+        layer.trainable = True
 
     x = model_base.output
-
-    dense1_added = Dense(
+    x = Dense(
         128,
-        kernel_regularizer=regularizer,
+        kernel_regularizer=check_regularizer(regularizer),
         kernel_initializer=initializer,
         activation="relu",
     )(x)
-    dense2_added = Dense(32, activation="relu", kernel_initializer=initializer)(
-        dense1_added
-    )
-    dropout1 = tf.keras.layers.Dropout(0.3)(dense2_added)
-    sig = Dense(1, activation="sigmoid")(dropout1)
-    model = tf.keras.Model(inputs=model_base.input, outputs=sig)
+    x = Dense(32, activation="relu", kernel_initializer=initializer)(x)
+
+    x = Dropout(check_dropout_range(dropout))(x)
+
+    output = Dense(1, activation="sigmoid")(x)
+
+    model = tf.keras.Model(inputs=model_base.input, outputs=output)
     return model
+
+
+
+get_configured_model("inceptionv3", 1025, 1, 43, 8, "l2")
