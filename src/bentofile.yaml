@@ -1,0 +1,26 @@
+service: "bento:svc"
+include:
+- "*.py"
+- "*.yaml"
+- "*.yml"
+python:
+    requirements_txt: "./requirements.txt"
+docker:
+    distro: debian
+    python_version: "3.10"
+    system_packages:
+    - ffmpeg
+models:
+  - "keras_resnet101_xr_shoulder.h5:7diloafracmk2edp"
+  - "keras_densenet169_xr_finger.h5:avst6qfragmk2edp"
+  - "keras_resnet152_xr_wrist.h5:y4lgiwfracmk2edp"
+  - "keras_resnet152v2_xr_humerus.h5:enzjxofragmk2edp"
+  - "keras_resnet101v2_xr_forearm.h5:ts2nf7vq76mk2edp"
+  - "keras_resnet101_xr_hand.h5:flbojkfrakmk2edp"
+  - "keras_xception_xr_hand.h5:fgiwuovq76mk2edp"
+  - "keras_densenet169_xr_wrist.h5:mn34thfq76mk2edp"
+  - "keras_resnet101v2_xr_humerus.h5:qt5irrfracmk2edp"
+  - "keras_densenet201_xr_forearm.h5:3ta5xafq76mk2edp"
+  - "keras_resnet152_xr_finger.h5:rcangwfragmk2edp"
+  - "keras_resnet101v2_xr_elbow.h5:nhy4pcvragmk2edp"
+  - "keras_resnet152_xr_hand.h5:x7bokgfragmk2edp"

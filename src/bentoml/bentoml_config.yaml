@@ -1,0 +1,31 @@
+version: 1
+api_server:
+    workers: 8
+    timeout: 180
+    metrics:
+        enabled: true
+    http:
+        port: 3000
+    logging:
+        access:
+            enabled: true
+            request_content_length: true
+            request_content_type: true
+            response_content_length: true
+            response_content_type: true
+runners:
+    resources:
+        cpu: 0.5
+    workers_per_resource: 1
+    timeout: 600
+    batching:
+        enabled: true
+        max_batch_size: 100
+        max_latency_ms: 10000
+    logging:
+        access:
+            enabled: true
+            request_content_length: true
+            request_content_type: true
+            response_content_length: true
+            response_content_type: true
