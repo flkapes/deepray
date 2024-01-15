@@ -9,6 +9,6 @@ scikit_image==0.19.3
 scikit_learn==1.0.2
 silence_tensorflow
 tensorflow==2.10.0
-gdown
 numba
 bentoml
+tqdl
