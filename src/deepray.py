@@ -180,7 +180,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         )
 
         bentoml.tensorflow.save_model(
-            str("last_15_trainable" + PARAMS["model"])
+            str(f"last_{PARAMS.get('fine_tune')}_layers_trainable_" + PARAMS["model"])
             + "_"
             + PARAMS["body_part"],  # +"_"+str(time.time()),
             model,
@@ -364,7 +364,7 @@ if __name__ == "__main__":
         "seed": parsed.seed,
         "image_size": parsed.image_size,
         "docker": parsed.docker,
-        "weights": parsed.weights.strip(),
+        "weights": parsed.weights.strip() if parsed.weights else None,
         "fine_tune": parsed.trainable_layers,
     }
     if training_params["docker"] == "meow":
