@@ -6,6 +6,14 @@ import re
 from pathlib import Path
 import warnings
 from exceptions import *
+import logging
+import logging.config
+import json
+
+with open("logging_config.json", "r") as config_file:
+    config_dict = json.load(config_file)
+logging.config.dictConfig(config_dict)
+logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -96,55 +104,97 @@ def set_device():
 
 def check_dropout_range(dropout):
     if not 0 <= dropout <= 1:
+        logger.error(f"Invalid Dropout Rate: {dropout}. Must be between 0 and 1.")
         raise InvalidDropoutRateException("Dropout rate must be between 0 and 1.")
     return dropout
+
 
 def check_regularizer(regularizer):
     valid_regularizers = ["l1", "l2", "l1_l2"]
     if regularizer not in valid_regularizers:
-        raise InvalidRegularizerException("Invalid regularization technique. Please choose from: " + ", ".join(valid_regularizers))
+        logger.error(
+            f"Invalid Regularizer: {regularizer}. Valid options:"
+            f" {', '.join(valid_regularizers)}"
+        )
+        raise InvalidRegularizerException(
+            "Invalid regularization technique. Please choose from: "
+            + ", ".join(valid_regularizers)
+        )
     return regularizer
 
-def check_seed_value(seed):
+
+def check_seed(seed):
     if not isinstance(seed, int):
+        logger.error(f"Invalid Seed Value: {seed}. Must be an integer.")
         raise InvalidSeedValueException("Seed value must be an integer.")
     return seed
 
+
 def check_trainable_layers(trainable_layers):
     if not isinstance(trainable_layers, int):
+        logger.error(
+            f"Invalid Trainable Layers: {trainable_layers}. Must be an integer."
+        )
         raise InvalidTrainableLayersException("Trainable layers must be an integer.")
     return trainable_layers
 
+
 def check_image_size(image_size):
     if not isinstance(image_size, int):
+        logger.error(f"Invalid Image Size: {image_size}. Must be an integer.")
         raise InvalidImageSizeException("Image size must be an integer.")
     if not 0 <= image_size <= 1024:
+        logger.error(f"Invalid Image Size: {image_size}. Must be between 0 and 1024.")
         raise InvalidImageSizeException("Image size must be between 0 and 1024.")
     return image_size
 
+
 def check_model_name(model_name, model_dict):
     if model_name not in model_dict():
-        raise ModelNotFoundException("Model not found. Please choose from: " + ", ".join(model_dict()))
+        logger.error(
+            f"Model Not Found: {model_name}. Available models:"
+            f" {', '.join(model_dict())}"
+        )
+        raise ModelNotFoundException(
+            "Model not found. Please choose from: " + ", ".join(model_dict())
+        )
     return model_name
 
+
 def check_dataset_type(dataset_type):
-    if generator_type not in ["train", "valid", "eval"]:
-        raise InvalidDatasetTypeException("Invalid generator type. Please choose from: 'train', 'valid', or 'eval'")
-    return generator_type
+    if dataset_type not in ["train", "valid", "eval"]:
+        logger.error(
+            f"Invalid Dataset Type: {dataset_type}. Valid types: 'train', 'valid',"
+            " 'eval'"
+        )
+        raise InvalidDatasetTypeException(
+            "Invalid dataset type. Please choose from: 'train', 'valid', or 'eval'"
+        )
+    return dataset_type
+
 
 def check_batch_size(batch_size):
     if not isinstance(batch_size, int):
+        logger.error(f"Invalid Batch Size: {batch_size}. Must be an integer.")
         raise InvalidBatchSizeException("Batch size must be an integer.")
     return batch_size
 
+
 def check_data_dir(data_dir):
     if not os.path.exists(data_dir):
+        logger.error(f"Data Directory Does Not Exist: {data_dir}")
         raise InvalidDataDirException("Data directory does not exist.")
     if not os.path.isdir(data_dir):
+        logger.error(f"Data Directory is Not a Directory: {data_dir}")
         raise InvalidDataDirException("Data directory is not a directory.")
     return data_dir
 
+
 def check_validation_split_value(valid_split_value):
     if not 0 <= valid_split_value <= 1:
+        logger.error(
+            f"Invalid Validation Split Value: {valid_split_value}. Must be between 0"
+            " and 1."
+        )
         return None
     return valid_split_value

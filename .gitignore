@@ -2,3 +2,4 @@ saved_checkpoints/
 .git/
 .env/
 __pycache__/
+*.log
