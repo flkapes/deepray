@@ -15,7 +15,7 @@ import focal_loss
 
 from weights import get_weights
 from transformations import apply_transformations
-from dataset import create_dataset, create_data_generator
+from new_dataset import load_images_with_augmentation_and_eval
 from models import get_configured_model
 from utils import set_device, get_next_folder_name
 
@@ -146,41 +146,26 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     if not PARAMS["weights"]:
         logger.debug(str(model.summary()))
         weights = get_weights(train_dir)
-        print("model weights not loaded")
-        train_dataset = create_dataset(
-            "train",
-            create_data_generator(
-                "train", PARAMS["train_val_split"], model_type=PARAMS["model"]
-            ),
-            PARAMS["train_val_split"],
-            train_dir,
-            PARAMS["train_batch_size"],
-            PARAMS["image_size"],
+        train_dataset = load_images_with_augmentation_and_eval(
+            dataset_directory=train_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["train_batch_size"], dataset_type='train', 
+            model_name=PARAMS["model"], validation_split=PARAMS["train_val_split"]
         )
-        valid_dataset = create_dataset(
-            "valid",
-            create_data_generator(
-                "valid", PARAMS["train_val_split"], model_type=PARAMS["model"]
-            ),
-            PARAMS["train_val_split"],
-            train_dir,
-            PARAMS["valid_batch_size"],
-            PARAMS["image_size"],
+        valid_dataset = load_images_with_augmentation_and_eval(
+            dataset_directory=train_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["valid_batch_size"], dataset_type='valid', 
+            model_name=PARAMS["model"], validation_split=PARAMS["train_val_split"]
         )
 
         history = model.fit(
             train_dataset,
-            steps_per_epoch=train_dataset.n // PARAMS["train_batch_size"],
             validation_data=valid_dataset,
             use_multiprocessing=False,
-            validation_steps=valid_dataset.n // PARAMS["valid_batch_size"],
             callbacks=callbacks,
             epochs=PARAMS["max_epochs"],
             class_weight=weights,
         )
 
         bentoml.tensorflow.save_model(
-            str("last_15_trainable" + PARAMS["model"])
+            str(f"last_{PARAMS['fine_tune']}_layers_trainable_" + PARAMS["model"])
             + "_"
             + PARAMS["body_part"],  # +"_"+str(time.time()),
             model,
@@ -202,13 +187,9 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         )
     else:
         model.load_weights(PARAMS["weights"])
-        eval_dataset = create_dataset(
-            "eval",
-            create_data_generator("eval", 0, model_type=PARAMS["model"]),
-            0,
-            eval_dir,
-            PARAMS["eval_batch_size"],
-            PARAMS["image_size"],
+        eval_dataset = load_images_with_augmentation_and_eval(
+            dataset_directory=eval_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["eval_batch_size"], dataset_type='eval', 
+            model_name=PARAMS["model"], validation_split=0
         )
         eval = model.evaluate(eval_dataset, verbose=2)
         logger.info(eval)
