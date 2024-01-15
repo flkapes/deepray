@@ -51,7 +51,8 @@ def get_model(model_name: str) -> tf.keras.Model:
     Returns:
         tf.keras.Model: The Keras model object for the specified model name.
     """
-    model = model_classes[check_model_name(model_name, list_models).strip().lower()]
+    model = model_classes[check_model_name(
+        model_name, list_models).strip().lower()]
     logger.info(f"Model '{model}' successfully retrieved")
     return model
 
@@ -91,11 +92,13 @@ def get_configured_model(
     retrieved_class = get_model(model_name)
     logger.info(
         f"Configuring model: {model_name} with image size {image_size}, dropout"
-        f" {dropout}, seed {seed}"
-    )
+        f" {dropout}, seed {seed}")
     model_base = retrieved_class(
         weights="imagenet",
-        input_shape=(check_image_size(image_size), check_image_size(image_size), 3),
+        input_shape=(
+            check_image_size(image_size),
+            check_image_size(image_size),
+            3),
         include_top=False,
         pooling="avg",
     )

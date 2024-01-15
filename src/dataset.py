@@ -22,10 +22,12 @@ logging.config.dictConfig(config_dict)
 
 # Create a logger
 logger = logging.getLogger(__name__)
-# Import the process_image function from the remove_labels module and assign it to apply_transformations variable
+# Import the process_image function from the remove_labels module and
+# assign it to apply_transformations variable
 apply_transformations = remove_labels.process_image
 
-# Dictionary that maps image classification model names to their corresponding pre-processing functions
+# Dictionary that maps image classification model names to their
+# corresponding pre-processing functions
 transformations = {
     "resnet152v2": tf.keras.applications.resnet_v2.preprocess_input,
     "resnet101v2": tf.keras.applications.resnet_v2.preprocess_input,
@@ -56,8 +58,10 @@ def get_model_preproc(model_str: str):
         logger.info(f"Preprocessing function retrieved for model: {model_str}")
         return transformations[model_str]
     else:
-        logger.error(f"Model preprocessing function not found for: {model_str}")
-        raise ValueError(f"No preprocessing function found for model: {model_str}")
+        logger.error(
+            f"Model preprocessing function not found for: {model_str}")
+        raise ValueError(
+            f"No preprocessing function found for model: {model_str}")
 
 
 def create_data_generator(
@@ -80,8 +84,7 @@ def create_data_generator(
 
     logger.info(
         f"Initializing data generator. Type: {generator_type}, Validation Split:"
-        f" {validation_split}"
-    )
+        f" {validation_split}")
 
     generator_mapping = {
         "train": lambda: tf.keras.preprocessing.image.ImageDataGenerator(
@@ -131,8 +134,7 @@ def create_dataset(
     """
     logger.info(
         f"Creating dataset of type {dataset_type} with image size {image_size}, batch"
-        f" size {batch_size}"
-    )
+        f" size {batch_size}")
     COLOR_MODE = "rgb"
     CLASS_MODE = "binary"
 
