@@ -20,3 +20,12 @@ class InvalidSeedValueException(Exception):
 class InvalidTrainableLayersException(Exception):
     """Raised when the number of trainable layers is invalid."""
     pass
+
+class InvalidDatasetTypeException(Exception):
+    """Raised when an invalid dataset type is specified."""
+    pass
+
+class InvalidDataDirException(Exception):
+    """Raised when an Invalid directory is specified."""
+    pass
+

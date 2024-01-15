@@ -126,3 +126,25 @@ def check_model_name(model_name, model_dict):
     if model_name not in model_dict():
         raise ModelNotFoundException("Model not found. Please choose from: " + ", ".join(model_dict()))
     return model_name
+
+def check_dataset_type(dataset_type):
+    if generator_type not in ["train", "valid", "eval"]:
+        raise InvalidDatasetTypeException("Invalid generator type. Please choose from: 'train', 'valid', or 'eval'")
+    return generator_type
+
+def check_batch_size(batch_size):
+    if not isinstance(batch_size, int):
+        raise InvalidBatchSizeException("Batch size must be an integer.")
+    return batch_size
+
+def check_data_dir(data_dir):
+    if not os.path.exists(data_dir):
+        raise InvalidDataDirException("Data directory does not exist.")
+    if not os.path.isdir(data_dir):
+        raise InvalidDataDirException("Data directory is not a directory.")
+    return data_dir
+
+def check_validation_split_value(valid_split_value):
+    if not 0 <= valid_split_value <= 1:
+        return None
+    return valid_split_value

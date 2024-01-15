@@ -142,7 +142,6 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             PARAMS["train_val_split"],
             train_dir,
             PARAMS["train_batch_size"],
-            PARAMS["pre_size"],
             PARAMS["image_size"],
         )
         valid_dataset = create_dataset(
@@ -153,7 +152,6 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             PARAMS["train_val_split"],
             train_dir,
             PARAMS["valid_batch_size"],
-            PARAMS["pre_size"],
             PARAMS["image_size"],
         )
 
@@ -196,7 +194,6 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             0,
             eval_dir,
             PARAMS["eval_batch_size"],
-            PARAMS["pre_size"],
             PARAMS["image_size"],
         )
         eval = model.evaluate(eval_dataset, verbose=2)
