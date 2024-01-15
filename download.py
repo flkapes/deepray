@@ -1,68 +1,115 @@
-import gdown
 import sys
 import argparse
+import hashlib
+import requests
+import zipfile
 
-datasetURL = "https://drive.google.com/file/d/12f2Z6TWkh5yl82DyI-Egg_Gi0qZSJovB/view?usp=share_link"
-weights_folder = "https://drive.google.com/drive/folders/16hB14UCJErVv-hu69WShcgg0GBVYh8_O?usp=drive_link"
-weights_zip_file = (
-    "https://drive.google.com/file/d/1s220_qbdfvmjUPr9Jp-9jDlpAtjenI1Q/view?usp=sharing"
-)
+saved_checkpoints_url = "http://sjc1.vultrobjects.com/mura-dataset/SavedCheckpoints.zip"
+mura_dataset_url = "http://sjc1.vultrobjects.com/mura-dataset/MURA-v1.1.zip"
+mura_separated_url = "http://sjc1.vultrobjects.com/mura-dataset/MURASeparated.zip"
 
 
-def download_dataset():
+def unzip_file(zip_path, extract_to=None):
+    """
+    Unzip a zip file.
+
+    Args:
+        zip_path (str): Path to the zip file.
+        extract_to (str, optional): Directory to extract the files. Defaults to the same directory as the zip file.
+    """
+    if extract_to is None:
+        extract_to = os.path.dirname(zip_path)
+
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        zip_ref.extractall(extract_to)
+    print(f"Extracted {zip_path} to {extract_to}")
+
+
+def download_file(url, output):
+    response = requests.get(url, stream=True)
+    with open(output, "wb") as file:
+        for chunk in response.iter_content(chunk_size=1024):
+            if chunk:
+                file.write(chunk)
+    print(f"Downloaded {output}")
+
+
+def md5(fname):
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+
+def download_and_check(url, output, expected_md5):
+    download_file(url, output)
+    downloaded_md5 = md5(output)
+    if downloaded_md5 != expected_md5:
+        print(
+            f"Error: MD5 mismatch for {output}. Expected {expected_md5}, got"
+            f" {downloaded_md5}"
+        )
+    else:
+        print(f"MD5 check passed for {output}")
+        unzip_file(output)  # Unzip after successful download and MD5 check
+
+
+def download_prepped_dataset():
+    expected_md5 = "2a480a89a815e41121468d982e1d525b"  # MD5 for MURASeparated.zip
     output = "MURASeparated.zip"
-    gdown.download(url=datasetURL, output=output, quiet=False, fuzzy=True)
+    download_and_check(mura_separated_url, output, expected_md5)
 
 
-def download_weights_folder():
-    output = "saved_checkpoints.zip"
-    gdown.download_folder(weights_zip_file, quiet=True, use_cookies=False)
+def download_saved_checkpoints():
+    expected_md5 = "55c6ba7c3da437b6b74fd86b47d775f0"  # MD5 for SavedCheckpoints.zip
+    output = "SavedCheckpoints.zip"
+    download_and_check(saved_checkpoints_url, output, expected_md5)
 
 
-def download_specific_weights(weight_file_name: str):
-    pass
+def download_unprocessed_dataset():
+    expected_md5 = "2b653718a9c55fcb6691d36b36f235de"  # MD5 for MURA-v1.1.zip
+    output = "MURA-v1.1.zip"
+    download_and_check(mura_dataset_url, output, expected_md5)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="DeepRay Data Downloader",
-        usage="""A script used to download relevant data and weights for the DeepRay Final Project of Faris Kapes.""",
+        prog="MURA Dataset Downloader",
+        usage="""A script used to download datasets and saved checkpoints for MURA project.""",
     )
     parser.add_argument(
         "-d",
         "--dataset",
         dest="download_dataset",
         action="store_true",
-        help="""Include this argument to download the pre-transformed dataset. Size 3.3GB.""",
+        help=(
+            "Include this argument to download the preprocessed MURA dataset. Size:"
+            " approx 3.3GB."
+        ),
     )
     parser.add_argument(
-        "-a",
-        "--all-weights",
-        dest="download_all_weights",
+        "-s",
+        "--saved-checkpoints",
+        dest="download_saved_checkpoints",
         action="store_true",
-        help="""Include this argument to download the all of the pre-trained model weights. Size 9.05GB.""",
+        help="Include this argument to download saved checkpoints. Size: approx 9GB.",
     )
     parser.add_argument(
-        "-w",
-        "--weight",
-        nargs=1,
-        default=None,
-        dest="download_weight_file",
-        help="""Include this argument to download the a single weight file from the pre-trained weights. Use the format: -w densenet121_xr_elbow !!! NOT IMPLEMENTED""",
+        "-m",
+        "--mura-dataset",
+        dest="download_mura_dataset",
+        action="store_true",
+        help=(
+            "Include this argument to download the unprocessed MURA-v1.1 dataset. Size:"
+            " approx 3.3GB."
+        ),
     )
-
     args = parser.parse_args()
 
-    if args.download_dataset == True:
-        download_dataset()
-    if args.download_all_weights == True and args.download_weight_file == None:
-        download_weights_folder()
-        quit(0)
-    elif args.download_all_weights == True and args.download_weight_file != None:
-        print(
-            "You cannot specify both --all-weights/-a at the same time as --weight"
-            " <weight>/-w <weight>"
-        )
-        quit(0)
-    if args.download_all_weights == False and args.download_weight_file != None:
-        download_specific_weights(args.download_weight_file)
+    if args.download_dataset:
+        download_prepped_dataset()
+    if args.download_saved_checkpoints:
+        download_saved_checkpoints()
+    if args.download_mura_dataset:
+        download_unprocessed_dataset()
