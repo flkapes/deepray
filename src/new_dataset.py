@@ -73,10 +73,11 @@ def load_images_with_augmentation_and_eval(dataset_directory, image_size, batch_
         tf.data.Dataset: The prepared dataset.
     """
     shuffle = dataset_type in ['training', 'validation']
-    params_dict = {
+    tf.keras.utils.set_random_seed(seed)
+    arg = {
         "directory": str(dataset_directory),
         "labels": 'inferred',
-        "label_mode": 'int',
+        "label_mode": 'binary',
         "class_names": None,
         "color_mode": 'rgb',
         "batch_size": batch_size,
@@ -89,19 +90,18 @@ def load_images_with_augmentation_and_eval(dataset_directory, image_size, batch_
         "follow_links": False,
         "crop_to_aspect_ratio": False
     }
-
     data_directory = check_data_dir(dataset_directory)
     image_size = check_image_size(image_size)
     batch_size = check_batch_size(batch_size)
 
     dataset = tf.keras.utils.image_dataset_from_directory(
-        **params_dict
+        **arg
     )
     class_names = dataset.class_names
     dataset = dataset.map(lambda x, y: (get_model_preproc(model_name)(x), y))
     image_batch, labels_batch = next(iter(dataset))
     first_image = image_batch[0]
-    print(np.min(first_image), np.max(first_image))
+    print(np.min(first_image), np.max(first_image), labels_batch[0])
     #def augment(image):
     #    image = tf.image.random_flip_left_right(image, seed=seed)
     #    image = tf.image.random_flip_up_down(image, seed=seed)
@@ -118,15 +118,6 @@ def load_images_with_augmentation_and_eval(dataset_directory, image_size, batch_
         return ds
 
     dataset = configure_for_performance(dataset)
-    import matplotlib.pyplot as plt
-    plt.figure(figsize=(10, 10))
-    for images, labels in dataset.take(1):
-        for i in range(9):
-            ax = plt.subplot(3, 3, i + 1)
-            plt.imshow(images[i].numpy().astype("uint8"))
-            plt.title(class_names[labels[i]])
-            plt.axis("off")
-    plt.savefig("meow.png")
 
     logger.info(f"Dataset with augmentation and evaluation handling loaded and configured for {dataset_type} type with {len(dataset)} batches.")
     return dataset

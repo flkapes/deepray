@@ -17,7 +17,7 @@ from weights import get_weights
 from transformations import apply_transformations
 from new_dataset import load_images_with_augmentation_and_eval
 from models import get_configured_model
-from utils import set_device, get_next_folder_name
+from utils import set_device, get_next_folder_name, check_seed
 
 # Set up logging configuration
 with open("logging_config.json", "r") as config_file:
@@ -128,8 +128,8 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         restore_best_weights=True)
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
         monitor="val_loss", save_best_only=True, save_weights_only=False,
-        verbose=2, filepath=checkpoint_path /
-        "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5",)
+        verbose=2, filepath=str(checkpoint_path /
+        "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5"),)
 
     callbacks = [
         early_stopping,
@@ -147,11 +147,11 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         logger.debug(str(model.summary()))
         weights = get_weights(train_dir)
         train_dataset = load_images_with_augmentation_and_eval(
-            dataset_directory=train_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["train_batch_size"], dataset_type='train', 
+            dataset_directory=train_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["train_batch_size"], dataset_type='training', 
             model_name=PARAMS["model"], validation_split=PARAMS["train_val_split"]
         )
         valid_dataset = load_images_with_augmentation_and_eval(
-            dataset_directory=train_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["valid_batch_size"], dataset_type='valid', 
+            dataset_directory=train_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["valid_batch_size"], dataset_type='validation', 
             model_name=PARAMS["model"], validation_split=PARAMS["train_val_split"]
         )
 
@@ -191,7 +191,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             dataset_directory=eval_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["eval_batch_size"], dataset_type='eval', 
             model_name=PARAMS["model"], validation_split=0
         )
-        eval = model.evaluate(eval_dataset, verbose=2)
+        eval = model.evaluate(eval_dataset, verbose=3)
         logger.info(eval)
 
 
@@ -354,4 +354,6 @@ if __name__ == "__main__":
         training_params["dataset_path"] = "/tmp/dset/MURASeparated"
     else:
         train_dir, eval_dir = None, None
+    if training_params['seed'] != None:
+        tf.keras.utils.set_random_seed(check_seed(training_params['seed']))
     train(training_params, train_dir, eval_dir)
