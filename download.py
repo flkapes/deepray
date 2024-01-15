@@ -3,6 +3,8 @@ import argparse
 import hashlib
 import requests
 import zipfile
+import tqdl
+import os
 
 saved_checkpoints_url = "http://sjc1.vultrobjects.com/mura-dataset/SavedCheckpoints.zip"
 mura_dataset_url = "http://sjc1.vultrobjects.com/mura-dataset/MURA-v1.1.zip"
@@ -26,11 +28,7 @@ def unzip_file(zip_path, extract_to=None):
 
 
 def download_file(url, output):
-    response = requests.get(url, stream=True)
-    with open(output, "wb") as file:
-        for chunk in response.iter_content(chunk_size=1024):
-            if chunk:
-                file.write(chunk)
+    tqdl.download(url, output)
     print(f"Downloaded {output}")
 
 
