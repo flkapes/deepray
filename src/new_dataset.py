@@ -72,7 +72,7 @@ def load_images_with_augmentation_and_eval(dataset_directory, image_size, batch_
     Returns:
         tf.data.Dataset: The prepared dataset.
     """
-    shuffle = dataset_type in ['training', 'validation']
+    """shuffle = dataset_type in ['training', 'validation']
     tf.keras.utils.set_random_seed(seed)
     arg = {
         "directory": str(dataset_directory),
@@ -89,19 +89,28 @@ def load_images_with_augmentation_and_eval(dataset_directory, image_size, batch_
         "interpolation": 'bilinear',
         "follow_links": False,
         "crop_to_aspect_ratio": False
-    }
+    }"""
     data_directory = check_data_dir(dataset_directory)
     image_size = check_image_size(image_size)
     batch_size = check_batch_size(batch_size)
 
-    dataset = tf.keras.utils.image_dataset_from_directory(
-        **arg
-    )
-    class_names = dataset.class_names
-    dataset = dataset.map(lambda x, y: (get_model_preproc(model_name)(x), y))
-    image_batch, labels_batch = next(iter(dataset))
-    first_image = image_batch[0]
-    print(np.min(first_image), np.max(first_image), labels_batch[0])
+    #dataset = tf.keras.utils.image_dataset_from_directory(
+    #    **arg
+    #)
+    def process_path(file_path):
+        parts = tf.strings.split(file_path, os.sep)
+        label = parts[-2]
+
+        image = tf.io.read_file(file_path)
+        image = tf.io.decode_png(image, channels=3)
+        image = tf.image.convert_image_dtype(image, tf.float32)
+        image = tf.image.resize(image, [image_size, image_size], method="lanczos5")
+        return get_model_preproc(model_name)(image), tf.where(tf.equal(label, 'positive'), 0, 1)
+
+    list_ds = tf.data.Dataset.list_files(str(data_directory/'*/*'), seed=seed)
+    labeled_ds = list_ds.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)
+
+
     #def augment(image):
     #    image = tf.image.random_flip_left_right(image, seed=seed)
     #    image = tf.image.random_flip_up_down(image, seed=seed)
@@ -114,10 +123,13 @@ def load_images_with_augmentation_and_eval(dataset_directory, image_size, batch_
 
     def configure_for_performance(ds):
         ds = ds.cache()
+        if dataset_type in ['train', 'valid']:
+            ds = ds.shuffle(buffer_size=1000, seed=seed)
+        ds = ds.batch(batch_size)
         ds = ds.prefetch(buffer_size=tf.data.AUTOTUNE)
         return ds
 
-    dataset = configure_for_performance(dataset)
+    dataset = configure_for_performance(labeled_ds)
 
     logger.info(f"Dataset with augmentation and evaluation handling loaded and configured for {dataset_type} type with {len(dataset)} batches.")
     return dataset

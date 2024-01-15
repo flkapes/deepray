@@ -191,7 +191,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             dataset_directory=eval_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["eval_batch_size"], dataset_type='eval', 
             model_name=PARAMS["model"], validation_split=0
         )
-        eval = model.evaluate(eval_dataset, verbose=3)
+        eval = model.evaluate(eval_dataset)
         logger.info(eval)
 
 
