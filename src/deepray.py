@@ -128,8 +128,8 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         restore_best_weights=True)
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
         monitor="val_loss", save_best_only=True, save_weights_only=False,
-        verbose=2, filepath=checkpoint_path /
-        "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5",)
+        verbose=2, filepath=str(checkpoint_path /
+        "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5"),)
 
     callbacks = [
         early_stopping,
