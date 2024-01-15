@@ -1,9 +1,27 @@
 import silence_tensorflow.auto
 import tensorflow as tf
 import remove_labels
-from utils import check_image_size, check_batch_size, check_seed, check_data_dir, check_dataset_type, check_validation_split_value
+import logging
+import logging.config
+import json
+from utils import (
+    check_image_size,
+    check_batch_size,
+    check_seed,
+    check_data_dir,
+    check_model_name,
+    check_dataset_type,
+    check_validation_split_value,
+)
 from models import list_models
 
+with open("logging_config.json", "r") as config_file:
+    config_dict = json.load(config_file)
+
+logging.config.dictConfig(config_dict)
+
+# Create a logger
+logger = logging.getLogger(__name__)
 # Import the process_image function from the remove_labels module and assign it to apply_transformations variable
 apply_transformations = remove_labels.process_image
 
@@ -33,7 +51,13 @@ def get_model_preproc(model_str: str):
     Returns:
         callable: The corresponding pre-processing function for the specified model.
     """
-    return transformations[model_str.strip().lower()]
+    model_str = model_str.strip().lower()
+    if model_str in transformations:
+        logger.info(f"Preprocessing function retrieved for model: {model_str}")
+        return transformations[model_str]
+    else:
+        logger.error(f"Model preprocessing function not found for: {model_str}")
+        raise ValueError(f"No preprocessing function found for model: {model_str}")
 
 
 def create_data_generator(
@@ -43,7 +67,7 @@ def create_data_generator(
 
     Args:
         generator_type (str): The type of generator to create (either "train", "valid", or "eval").
-        valid_split_value (float): The proportion of the dataset to use for validation.
+        validation_split (float): The proportion of the dataset to use for validation.
         model_type (str): The name of the image classification model to use.
 
     Returns:
@@ -51,9 +75,13 @@ def create_data_generator(
     """
     generator_type = check_dataset_type(generator_type)
     validation_split = check_validation_split_value(validation_split)
-    model_type = check_model_name(model, list_models)
 
     preproc_func = get_model_preproc(model_type)
+
+    logger.info(
+        f"Initializing data generator. Type: {generator_type}, Validation Split:"
+        f" {validation_split}"
+    )
 
     generator_mapping = {
         "train": lambda: tf.keras.preprocessing.image.ImageDataGenerator(
@@ -72,7 +100,10 @@ def create_data_generator(
             preprocessing_function=preproc_func,
         ),
     }
+
+    logger.info(f"Data generator created successfully for {generator_type}")
     return generator_mapping[generator_type]()
+
 
 def create_dataset(
     dataset_type: str,
@@ -98,6 +129,10 @@ def create_dataset(
     Returns:
         tf.keras.preprocessing.image.DirectoryIterator: The directory iterator for the dataset.
     """
+    logger.info(
+        f"Creating dataset of type {dataset_type} with image size {image_size}, batch"
+        f" size {batch_size}"
+    )
     COLOR_MODE = "rgb"
     CLASS_MODE = "binary"
 
@@ -111,23 +146,24 @@ def create_dataset(
     class_mode = CLASS_MODE
 
     arguments = {
-        "data_directory": data_directory,
+        "directory": data_directory,
         "target_size": target_size,
         "batch_size": batch_size,
         "seed": seed,
         "color_mode": color_mode,
-        "class_mode": class_mode
+        "class_mode": class_mode,
     }
 
     if dataset_type == "train":
         arguments["shuffle"] = True
-        arguments["subset"] = 'training' if validation_split > 0 else None
+        arguments["subset"] = "training" if validation_split > 0 else None
 
     elif dataset_type == "valid":
-       arguments["shuffle"] = False
-       arguments["subset"] = 'validation' if validation_split > 0 else None
+        arguments["shuffle"] = False
+        arguments["subset"] = "validation" if validation_split > 0 else None
 
     elif dataset_type == "eval":
         arguments["shuffle"] = False
 
+    logger.info(f"Dataset created successfully for {dataset_type}")
     return data_generator.flow_from_directory(**arguments)

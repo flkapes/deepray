@@ -1,4 +1,6 @@
 import logging
+import logging.config
+import json
 from typing import Optional
 import time
 
@@ -14,9 +16,14 @@ from utils import (
     check_dropout_range,
     check_image_size,
     check_regularizer,
-    check_seed_value,
+    check_seed,
     check_trainable_layers,
 )
+
+with open("logging_config.json", "r") as config_file:
+    config_dict = json.load(config_file)
+logging.config.dictConfig(config_dict)
+logger = logging.getLogger(__name__)
 
 # Dictionary that maps model names to their corresponding Keras model classes
 model_classes = {
@@ -44,7 +51,9 @@ def get_model(model_name: str) -> tf.keras.Model:
     Returns:
         tf.keras.Model: The Keras model object for the specified model name.
     """
-    return model_classes[check_model_name(model_name, list_models).strip().lower()]
+    model = model_classes[check_model_name(model_name, list_models).strip().lower()]
+    logger.info(f"Model '{model}' successfully retrieved")
+    return model
 
 
 def list_models() -> list:
@@ -53,6 +62,7 @@ def list_models() -> list:
     Returns:
         list: A list of available model names.
     """
+    logger.info(f"List of available models queried successfully.")
     return list(model_classes.keys())
 
 
@@ -79,6 +89,10 @@ def get_configured_model(
         tf.keras.Model: The compiled and configured instance of the specified Keras model.
     """
     retrieved_class = get_model(model_name)
+    logger.info(
+        f"Configuring model: {model_name} with image size {image_size}, dropout"
+        f" {dropout}, seed {seed}"
+    )
     model_base = retrieved_class(
         weights="imagenet",
         input_shape=(check_image_size(image_size), check_image_size(image_size), 3),
@@ -92,7 +106,7 @@ def get_configured_model(
     )
 
     trainable_layers = abs(check_trainable_layers(trainable_layers))
-    logging.info("Found trainable layers %s", trainable_layers)
+    logger.info("Found trainable layers %s", trainable_layers)
     for layer in model_base.layers[-trainable_layers:]:
         layer.trainable = True
 
@@ -110,8 +124,5 @@ def get_configured_model(
     output = Dense(1, activation="sigmoid")(x)
 
     model = tf.keras.Model(inputs=model_base.input, outputs=output)
+    logger.info(f"Model '{model_name}' successfully configured")
     return model
-
-
-
-get_configured_model("inceptionv3", 1025, 1, 43, 8, "l2")

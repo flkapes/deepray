@@ -12,8 +12,13 @@ def load_image(file_path: str) -> np.ndarray:
     Returns:
         numpy.ndarray: The loaded image as a NumPy array.
     """
-    image = cv2.imread(file_path)
-    return image
+    try:
+        image = cv2.imread(file_path)
+        if image is None:
+            raise FileNotFoundError(f"File not found: {file_path}")
+        return image
+    except Exception as e:
+        raise IOError(f"Error reading file {file_path}: {e}")
 
 
 def apply_grayscale(image: np.ndarray) -> np.ndarray:
@@ -25,6 +30,8 @@ def apply_grayscale(image: np.ndarray) -> np.ndarray:
     Returns:
         numpy.ndarray: The grayscale image.
     """
+    if not isinstance(image, np.ndarray):
+        raise TypeError("Input must be a NumPy array.")
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 
@@ -38,6 +45,8 @@ def apply_gaussian_blur(image: np.ndarray, sigma: float = 6) -> np.ndarray:
     Returns:
         numpy.ndarray: The filtered image.
     """
+    if sigma <= 0:
+        raise ValueError("Sigma must be a positive number.")
     return cv2.GaussianBlur(image, (0, 0), sigmaX=sigma, sigmaY=sigma)
 
 
@@ -51,6 +60,8 @@ def apply_morphology(image: np.ndarray, kernel_size: int = 18) -> np.ndarray:
     Returns:
         numpy.ndarray: The processed image.
     """
+    if kernel_size <= 0:
+        raise ValueError("Kernel size must be a positive integer.")
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
     return cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
 
@@ -64,10 +75,20 @@ def apply_threshold(image: np.ndarray) -> np.ndarray:
     Returns:
         numpy.ndarray: The thresholded image.
     """
+    if not isinstance(image, np.ndarray):
+        logger.error("Input for thresholding must be a NumPy array.")
+        raise TypeError("Input must be a NumPy array.")
+
+    logger.info("Applying thresholding to image.")
     return cv2.threshold(image, 0, 255, cv2.THRESH_OTSU)[1]
 
 
-def apply_contour_filtering(image: np.ndarray, thresh_image: np.ndarray, min_area: int = 265, max_area: int = 3600) -> np.ndarray:
+def apply_contour_filtering(
+    image: np.ndarray,
+    thresh_image: np.ndarray,
+    min_area: int = 265,
+    max_area: int = 3600,
+) -> np.ndarray:
     """Filter contours from an image based on area.
 
     Args:
@@ -79,9 +100,19 @@ def apply_contour_filtering(image: np.ndarray, thresh_image: np.ndarray, min_are
     Returns:
         numpy.ndarray: The image with filtered contours.
     """
+    if not all(isinstance(i, np.ndarray) for i in [image, thresh_image]):
+        logger.error("Inputs for contour filtering must be NumPy arrays.")
+        raise TypeError("Inputs must be NumPy arrays.")
+    if min_area <= 0 or max_area <= 0:
+        logger.error("Area bounds for contour filtering must be positive.")
+        raise ValueError("Area bounds must be positive.")
+
+    logger.info("Applying contour filtering to image.")
     masked_image = image.copy()
     mean_val = int(np.mean(masked_image))
-    contours, _ = cv2.findContours(thresh_image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
+    contours, _ = cv2.findContours(
+        thresh_image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1
+    )
 
     for contour in contours:
         area = cv2.contourArea(contour)
@@ -100,23 +131,37 @@ def apply_stretch_intensity(image: np.ndarray):
     Returns:
         numpy.ndarray: The stretched image.
     """
-    min_val = int(np.amin(image))
-    max_val = int(np.amax(image))
-    stretched_image = exposure.rescale_intensity(image, in_range=(min_val, max_val), out_range=(0, 255))
+    if not isinstance(image, np.ndarray):
+        logger.error("Input for intensity stretching must be a NumPy array.")
+        raise TypeError("Input must be a NumPy array.")
+
+    logger.info("Applying intensity stretch to image.")
+    min_val, max_val = np.amin(image), np.amax(image)
+    stretched_image = skimage.exposure.rescale_intensity(
+        image, in_range=(min_val, max_val), out_range=(0, 255)
+    )
     return stretched_image.astype(np.uint8)
 
 
 def process_image(file_path, is_arr=True) -> np.ndarray:
-    if not is_arr:
-        img = load_image(file_path)
-    else:
-        img = np.asarray(file_path)
-        file_path = img.astype("uint8")
-    gray = apply_grayscale(img)
-    blur = apply_gaussian_blur(gray, 5)
-    morph = apply_morphology(blur)
-    thresh = apply_threshold(morph)
-    masked = apply_contour_filtering(gray, thresh)
-    result = apply_stretch_intensity(masked)
-    result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
-    return result
+    logger.info("Processing image.")
+    try:
+        if not is_arr:
+            img = load_image(file_path)
+        elif isinstance(file_path, np.ndarray):
+            img = file_path.astype("uint8")
+        else:
+            logger.error("file_path must be a string or a NumPy array.")
+            raise TypeError("file_path must be a string or a NumPy array.")
+            gray = apply_grayscale(img)
+        blur = apply_gaussian_blur(gray, 5)
+        morph = apply_morphology(blur)
+        thresh = apply_threshold(morph)
+        masked = apply_contour_filtering(gray, thresh)
+        result = apply_stretch_intensity(masked)
+        result = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+        logger.info("Image processing completed successfully.")
+        return result
+    except Exception as e:
+        logger.error(f"Error occurred during image processing: {e}")
+        raise

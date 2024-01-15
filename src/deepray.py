@@ -1,6 +1,9 @@
 import os
 import time
 import warnings
+import json
+import logging
+import logging.config
 
 import silence_tensorflow.auto
 import tensorflow.keras.metrics as metrics
@@ -13,6 +16,17 @@ from transformations import apply_transformations
 from dataset import create_dataset, create_data_generator
 from models import get_configured_model
 from utils import set_device, get_next_folder_name
+
+# Set up logging configuration
+with open("logging_config.json", "r") as config_file:
+    config_dict = json.load(config_file)
+
+logging.config.dictConfig(config_dict)
+pil_logger = logging.getLogger('PIL')
+pil_logger.setLevel(logging.WARNING)
+
+# Create a logger
+logger = logging.getLogger(__name__)
 
 # Suppress warnings for better readability
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -90,7 +104,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     )
 
     # Build the model
-    model.build(input_shape=(None, PARAMS["pre_size"], PARAMS["pre_size"], 3))
+    model.build(input_shape=(None, PARAMS["image_size"], PARAMS["image_size"], 3))
 
     # Define callbacks for the training process
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
@@ -102,7 +116,6 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         min_lr=0.000000000001,
     )
 
-    weights = get_weights(train_dir)
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir=os.environ.get("LOG_DIR", f"tensorboard/{time.time()}"),
         histogram_freq=1,
@@ -124,9 +137,9 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     callbacks = [early_stopping, model_checkpoint, reduce_lr, tensorboard_callback]
 
     # Print a summary of the model architecture
-    print(
+    logger.info(
         f"{PARAMS['model']}        --        {PARAMS['body_part']}        --       "
-        + f" ({PARAMS['pre_size']}px ,{PARAMS['pre_size']}px)"
+        + f" ({PARAMS['image_size']}px ,{PARAMS['image_size']}px)"
     )
     if PARAMS["weights"] != "none":
         model.load_weights(PARAMS["weights"])
@@ -134,6 +147,8 @@ def train(PARAMS, train_dir=None, eval_dir=None):
 
     # Train the model using the created datasets, callbacks, and class weights
     if PARAMS["weights"] == "none":
+        weights = get_weights(train_dir)
+        print("model weights not loaded")
         train_dataset = create_dataset(
             "train",
             create_data_generator(
