@@ -1,6 +1,17 @@
 import cv2
 import numpy as np
+import logging
+import logging.config
+import json
 import skimage.exposure
+
+with open("logging_config.json", "r") as config_file:
+    config_dict = json.load(config_file)
+
+logging.config.dictConfig(config_dict)
+
+# Create a logger
+logger = logging.getLogger(__name__)
 
 
 def load_image(file_path: str) -> np.ndarray:
@@ -62,8 +73,7 @@ def apply_morphology(image: np.ndarray, kernel_size: int = 18) -> np.ndarray:
     """
     if kernel_size <= 0:
         raise ValueError("Kernel size must be a positive integer.")
-    kernel = cv2.getStructuringElement(
-        cv2.MORPH_RECT, (kernel_size, kernel_size))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
     return cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
 
 
@@ -149,12 +159,10 @@ def process_image(file_path, is_arr=True) -> np.ndarray:
     try:
         if not is_arr:
             img = load_image(file_path)
-        elif isinstance(file_path, np.ndarray):
-            img = file_path.astype("uint8")
         else:
-            logger.error("file_path must be a string or a NumPy array.")
-            raise TypeError("file_path must be a string or a NumPy array.")
-            gray = apply_grayscale(img)
+            img = np.asarray(file_path)
+            file_path = img.astype("uint8")
+        gray = apply_grayscale(img)
         blur = apply_gaussian_blur(gray, 5)
         morph = apply_morphology(blur)
         thresh = apply_threshold(morph)

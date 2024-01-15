@@ -3,6 +3,7 @@ include:
 - "*.py"
 - "*.yaml"
 - "*.yml"
+- "*.json"
 python:
     requirements_txt: "./requirements.txt"
 docker:
@@ -24,3 +25,6 @@ models:
   - "keras_resnet152_xr_finger.h5:rcangwfragmk2edp"
   - "keras_resnet101v2_xr_elbow.h5:nhy4pcvragmk2edp"
   - "keras_resnet152_xr_hand.h5:x7bokgfragmk2edp"
+  - "keras_densenet201_xr_elbow.h5:tf6u3pfragmk2edp"
+  - "keras_densenet121_xr_elbow.h5:g2p2chfrakmk2edp"
+  - "keras_densenet201_xr_shoulder.h5:iagfy5fracmk2edp"
