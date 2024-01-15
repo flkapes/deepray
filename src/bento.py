@@ -11,7 +11,8 @@ import remove_labels
 from dataset import get_model_preproc
 
 # Load the TensorFlow models for different bones.
-# At least the top model + one extra picked arbitrarily are served for each bone.
+# At least the top model + one extra picked arbitrarily are served for
+# each bone.
 densenet201_xr_elbow = bentoml.tensorflow.get(
     "keras_densenet201_xr_elbow.h5:tf6u3pfragmk2edp"
 ).to_runner(max_latency_ms=180000)

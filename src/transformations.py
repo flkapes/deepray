@@ -24,7 +24,8 @@ def apply_histogram_equalization(image: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(img_equalized, cv2.COLOR_GRAY2RGB)
 
 
-def apply_contrast_limited_histogram_equalization(image: np.ndarray) -> np.ndarray:
+def apply_contrast_limited_histogram_equalization(
+        image: np.ndarray) -> np.ndarray:
     """Applies contrast limited adaptive histogram equalization (CLAHE) on an image.
 
     Args:
@@ -39,7 +40,9 @@ def apply_contrast_limited_histogram_equalization(image: np.ndarray) -> np.ndarr
     return cv2.cvtColor(img_ahe, cv2.COLOR_GRAY2RGB)
 
 
-def apply_gamma_correction(image: np.ndarray, gamma: float = 1.0) -> np.ndarray:
+def apply_gamma_correction(
+        image: np.ndarray,
+        gamma: float = 1.0) -> np.ndarray:
     """Applies gamma correction on an image.
 
     Args:
@@ -98,7 +101,9 @@ def apply_resize(image, image_size=384):
     Returns:
     numpy.ndarray: The resized RGB image.
     """
-    return cv2.resize(np.asarray(image).astype("uint8"), (image_size, image_size))
+    return cv2.resize(
+        np.asarray(image).astype("uint8"),
+        (image_size, image_size))
 
 
 def preprocess(img: PIL.Image) -> np.ndarray:
@@ -146,7 +151,9 @@ def transform_all(image: PIL.Image, ahe: bool = True) -> np.ndarray:
     return np.asarray(image).astype("uint8")
 
 
-def apply_transformations(image: PIL.Image, headless: bool = True) -> np.ndarray:
+def apply_transformations(
+        image: PIL.Image,
+        headless: bool = True) -> np.ndarray:
     """Applies image transformations and preprocessing steps to the input image.
 
     Args:
