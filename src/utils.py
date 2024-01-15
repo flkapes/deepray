@@ -1,5 +1,4 @@
 import silence_tensorflow.auto
-import tensorflow_addons as tfa
 import tensorflow as tf
 import os
 import re
