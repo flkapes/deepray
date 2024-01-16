@@ -113,7 +113,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
         monitor="val_loss",
         factor=0.12,
-        patience=2,
+        patience=PARAMS["patience"],
         min_delta=0.01,
         verbose=1,
         min_lr=0.000000000001,
@@ -199,7 +199,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             dataset_directory=eval_dir,
             image_size=PARAMS["image_size"],
             batch_size=PARAMS["eval_batch_size"],
-            dataset_type='eval',
+            dataset_type='evaulation',
             model_name=PARAMS["model"],
             validation_split=0)
         eval = model.evaluate(eval_dataset)
