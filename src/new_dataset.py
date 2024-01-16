@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 import logging
 import logging.config
@@ -9,7 +10,6 @@ from utils import (
     check_seed,
     check_data_dir,
 )
-
 
 
 with open("logging_config.json", "r") as config_file:
@@ -55,8 +55,16 @@ def get_model_preproc(model_str: str):
         raise ValueError(
             f"No preprocessing function found for model: {model_str}")
 
-import numpy as np
-def load_images_with_augmentation_and_eval(dataset_directory, image_size, batch_size, dataset_type, model_name, validation_split=0, seed=44):
+
+def load_images_with_augmentation_and_eval(
+    dataset_directory,
+    image_size,
+    batch_size,
+    dataset_type,
+    model_name,
+    validation_split=0,
+    seed=44,
+):
     """
     Load and preprocess images using tf.data.Dataset with data augmentation for training dataset and specific handling for evaluation dataset.
 
@@ -94,42 +102,62 @@ def load_images_with_augmentation_and_eval(dataset_directory, image_size, batch_
     image_size = check_image_size(image_size)
     batch_size = check_batch_size(batch_size)
 
-    #dataset = tf.keras.utils.image_dataset_from_directory(
-    #    **arg
-    #)
+
     def process_path(file_path):
+        logger.info(f"Processing file: {file_path}")
+
         parts = tf.strings.split(file_path, os.sep)
         label = parts[-2]
 
-        image = tf.io.read_file(file_path)
-        image = tf.io.decode_png(image, channels=3)
-        image = tf.image.convert_image_dtype(image, tf.float32)
-        image = tf.image.resize(image, [image_size, image_size], method="lanczos5")
-        return get_model_preproc(model_name)(image), tf.where(tf.equal(label, 'positive'), 0, 1)
+        # Log label extraction
+        logger.info(f"Extracted label: {label}")
 
-    list_ds = tf.data.Dataset.list_files(str(data_directory/'*/*'), seed=seed)
+        image = tf.io.read_file(file_path)
+        image = tf.io.decode_png(image, channels=1)
+        image = tf.image.convert_image_dtype(image, tf.float32)
+        image = tf.image.grayscale_to_rgb(image)
+        image = tf.image.resize(
+            image, [image_size, image_size],
+            method="bilinear")
+
+        if dataset_type == "train":
+            image = augment(image)
+
+        # Log image properties after decoding and resizing
+        logger.info(
+            f"Image shape after resize: {image.shape}, dtype: {image.dtype}")
+
+        # Log preprocessed image properties
+        return image, tf.where(tf.equal(label, "positive"), 1, 0)
+
+    list_ds = tf.data.Dataset.list_files(
+        str(data_directory / "*/*"), seed=seed)
     labeled_ds = list_ds.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)
 
-
-    #def augment(image):
-    #    image = tf.image.random_flip_left_right(image, seed=seed)
-    #    image = tf.image.random_flip_up_down(image, seed=seed)
-    #    return image
-
-    #def preprocess_image(image):
-        #if dataset_type == 'train':
-        #     image = augment(image)
-    #    return get_model_preproc(model_name)(image)
+    def augment(image):
+        image = tf.image.random_flip_left_right(image, seed=seed)
+        image = tf.image.random(image, seed=seed)
+        return image
 
     def configure_for_performance(ds):
         ds = ds.cache()
-        if dataset_type in ['train', 'valid']:
-            ds = ds.shuffle(buffer_size=1000, seed=seed)
+        if dataset_type in ["train", "valid"]:
+            ds = ds.shuffle(buffer_size=1000, seed=seed, num_parallel_calls=tf.data.AUTOTUNE)
         ds = ds.batch(batch_size)
         ds = ds.prefetch(buffer_size=tf.data.AUTOTUNE)
+        for images, labels in ds.take(1):
+            logger.info(f"Batch size: {len(images)}")
+            logger.info(
+                f"Batch image shape: {images[0].shape}, dtype: {images[0].dtype}"
+            )
+            # Log first few labels
+            logger.info(f"Batch label sample: {labels.numpy()}")
+
         return ds
 
     dataset = configure_for_performance(labeled_ds)
 
-    logger.info(f"Dataset with augmentation and evaluation handling loaded and configured for {dataset_type} type with {len(dataset)} batches.")
+    logger.info(
+        "Dataset with augmentation and evaluation handling loaded and configured for"
+        f" {dataset_type} type with {len(dataset)} batches.")
     return dataset

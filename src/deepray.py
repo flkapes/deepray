@@ -127,9 +127,14 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         monitor="val_loss", patience=PARAMS["patience"],
         restore_best_weights=True)
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        monitor="val_loss", save_best_only=True, save_weights_only=False,
-        verbose=2, filepath=str(checkpoint_path /
-        "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5"),)
+        monitor="val_loss",
+        save_best_only=True,
+        save_weights_only=False,
+        verbose=2,
+        filepath=str(
+            checkpoint_path /
+            "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5"),
+    )
 
     callbacks = [
         early_stopping,
@@ -147,13 +152,15 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         logger.debug(str(model.summary()))
         weights = get_weights(train_dir)
         train_dataset = load_images_with_augmentation_and_eval(
-            dataset_directory=train_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["train_batch_size"], dataset_type='training', 
-            model_name=PARAMS["model"], validation_split=PARAMS["train_val_split"]
-        )
+            dataset_directory=train_dir, image_size=PARAMS["image_size"],
+            batch_size=PARAMS["train_batch_size"],
+            dataset_type='training', model_name=PARAMS["model"],
+            validation_split=PARAMS["train_val_split"])
         valid_dataset = load_images_with_augmentation_and_eval(
-            dataset_directory=train_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["valid_batch_size"], dataset_type='validation', 
-            model_name=PARAMS["model"], validation_split=PARAMS["train_val_split"]
-        )
+            dataset_directory=train_dir, image_size=PARAMS["image_size"],
+            batch_size=PARAMS["valid_batch_size"],
+            dataset_type='validation', model_name=PARAMS["model"],
+            validation_split=PARAMS["train_val_split"])
 
         history = model.fit(
             train_dataset,
@@ -165,7 +172,8 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         )
 
         bentoml.tensorflow.save_model(
-            str(f"last_{PARAMS['fine_tune']}_layers_trainable_" + PARAMS["model"])
+            str(f"last_{PARAMS['fine_tune']}_layers_trainable_" +
+                PARAMS["model"])
             + "_"
             + PARAMS["body_part"],  # +"_"+str(time.time()),
             model,
@@ -188,9 +196,12 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     else:
         model.load_weights(PARAMS["weights"])
         eval_dataset = load_images_with_augmentation_and_eval(
-            dataset_directory=eval_dir, image_size=PARAMS["image_size"], batch_size=PARAMS["eval_batch_size"], dataset_type='eval', 
-            model_name=PARAMS["model"], validation_split=0
-        )
+            dataset_directory=eval_dir,
+            image_size=PARAMS["image_size"],
+            batch_size=PARAMS["eval_batch_size"],
+            dataset_type='eval',
+            model_name=PARAMS["model"],
+            validation_split=0)
         eval = model.evaluate(eval_dataset)
         logger.info(eval)
 
@@ -307,8 +318,8 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "-x",
         "--docker",
-        type=str,
-        default="False",
+        type=bool,
+        default=False,
         help=(
             "Argument that toggles the default dataset filepath for easier docker"
             " deployment."),
@@ -345,15 +356,15 @@ if __name__ == "__main__":
         "seed": parsed.seed,
         "image_size": parsed.image_size,
         "docker": parsed.docker,
-        "weights": parsed.weights.strip(),
+        "weights": parsed.weights,
         "fine_tune": parsed.trainable_layers,
     }
-    if training_params["docker"] == "meow":
+    if training_params["docker"]:
         train_dir = f'/tmp/dset/MURASeparated/{training_params["body_part"]}'
         eval_dir = f'/tmp/dset/MURASeparated/valid/{training_params["body_part"]}'
         training_params["dataset_path"] = "/tmp/dset/MURASeparated"
     else:
         train_dir, eval_dir = None, None
-    if training_params['seed'] != None:
+    if training_params['seed'] is not None:
         tf.keras.utils.set_random_seed(check_seed(training_params['seed']))
     train(training_params, train_dir, eval_dir)
