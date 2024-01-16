@@ -19,30 +19,37 @@ DeepRay is a collection of models and training code, built to classify X-Ray ima
 
 ## Dataset downloads & Pretrained Weights
 
-### Download MURA from Stanford ML (slower):
+### Autodownload script, make sure that you have installed the requirements already:
+```bash
+  pip install -r requirements.txt
+  python download.py --dataset
+  python download.py --saved-checkpoints
+  python download.py --mura-dataset
+```
+
+### Download MURA directly from my Silicon Valley based Object Store
 
 ```bash
-  wget -O MURA-v1.1.zip https://stanfordmlgroup.github.io/competitions/mura/
+  wget -O MURA-v1.1.zip http://sjc1.vultrobjects.com/mura-dataset/MURA-v1.1.zip
   unzip MURA-v1.1.zip
-  python general.py
+  python extractimages.py
   rm MURA-v1.1.zip
 ```
 
-### Download pre-prepared MURA Dataset Folder from GCloud:
-Link for manual download:
+### Download the pre-prepared MURA Dataset Folder from my Silicon Valley based Object Store:
+
 ```bash
-  https://drive.google.com/file/d/12f2Z6TWkh5yl82DyI-Egg_Gi0qZSJovB/view?usp=share_link
-```
-Autodownload script, ensuring that you have installed the requirements already:
-```bash
-  pip install -r requirements.txt
-  python download.py
+wget -O MURASeparated.zip http://sjc1.vultrobjects.com/mura-dataset/MURASeparated.zip
+unzip MURASeparated.zip
+rm MURASeparated.zip
 ```
 
-### Download Pretrained Weights Files
-Open the link below in your browser and choose a model weight file.
+### Download Pretrained Weights Files from my Silicon Valley based Object Store
+
 ```bash
-  https://drive.google.com/drive/folders/1Ypbyc7KXqrXcwEy0qxdQU2wR3yxXdJtF?usp=share_link
+wget -O SavedCheckpoints.zip http://sjc1.vultrobjects.com/mura-dataset/SavedCheckpoints.zip
+unzip SavedCheckpoints.zip
+rm SavedCheckpoints.zip
 ```
 
 ## Argument Descriptions

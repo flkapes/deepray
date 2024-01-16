@@ -3,3 +3,5 @@ saved_checkpoints/
 .env/
 __pycache__/
 *.log
+.vscode/*
+*/.vscode
