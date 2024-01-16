@@ -132,7 +132,7 @@ def load_images_with_augmentation_and_eval(
 
     list_ds = tf.data.Dataset.list_files(
         str(data_directory / "*/*"), seed=seed)
-    labeled_ds = list_ds.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)
+    total_images = tf.data.experimental.cardinality(list_ds).numpy()
 
     def augment(image):
         image = tf.image.random_flip_left_right(image, seed=seed)
@@ -141,7 +141,7 @@ def load_images_with_augmentation_and_eval(
 
     def configure_for_performance(ds):
         ds = ds.cache()
-        if dataset_type in ["train", "valid"]:
+        if dataset_type in ["training", "validation"]:
             ds = ds.shuffle(buffer_size=1000, seed=seed, num_parallel_calls=tf.data.AUTOTUNE)
         ds = ds.batch(batch_size)
         ds = ds.prefetch(buffer_size=tf.data.AUTOTUNE)
@@ -155,6 +155,16 @@ def load_images_with_augmentation_and_eval(
 
         return ds
 
+    if dataset_type == 'training':
+        skip_count = int(total_images * validation_split)
+        dataset = list_ds.skip(skip_count)
+    elif dataset_type == 'validation':
+        take_count = int(total_images * validation_split)
+        dataset = list_ds.take(take_count)
+    else:
+        dataset = list_ds
+
+    labeled_ds = dataset.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)
     dataset = configure_for_performance(labeled_ds)
 
     logger.info(
