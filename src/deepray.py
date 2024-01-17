@@ -1,3 +1,8 @@
+import comet_ml
+
+experiment = comet_ml.Experiment(
+
+)
 import pathlib
 import os
 import time
@@ -61,8 +66,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     # Define paths for training, evaluation, and checkpoint directories
     if train_dir is not None and eval_dir is not None:
         eval_dir = eval_dir
-        checkpoint_path = pathlib.Path(
-            checkpoint_save_path) / body_part / model_str
+        checkpoint_path = pathlib.Path(checkpoint_save_path) / body_part / model_str
     else:
         try:
             train_dir = pathlib.Path(dataset_path) / "train" / body_part
@@ -70,10 +74,11 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         except BaseException:
             train_dir = pathlib.Path(dataset_path) / body_part
             eval_dir = pathlib.Path(dataset_path) / body_part
-        checkpoint_path = pathlib.Path(
-            checkpoint_save_path) / body_part / model_str
-        new_folder = checkpoint_path / ("run" + str(
-            get_next_folder_name(checkpoint_save_path, body_part, model_str)))
+        checkpoint_path = pathlib.Path(checkpoint_save_path) / body_part / model_str
+        new_folder = checkpoint_path / (
+            "run"
+            + str(get_next_folder_name(checkpoint_save_path, body_part, model_str))
+        )
         new_folder.mkdir(parents=True, exist_ok=True)
 
     # Get the configured model
@@ -102,12 +107,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     )
 
     # Build the model
-    model.build(
-        input_shape=(
-            None,
-            PARAMS["image_size"],
-            PARAMS["image_size"],
-            3))
+    model.build(input_shape=(None, PARAMS["image_size"], PARAMS["image_size"], 3))
 
     # Define callbacks for the training process
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
@@ -119,28 +119,32 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         min_lr=0.000000000001,
     )
 
+    tensorboard_folder_time = str(time.time())
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
-        log_dir=os.environ.get("LOG_DIR", f"tensorboard/{time.time()}"),
+        log_dir=os.environ.get("LOG_DIR", f"tensorboard/{tensorboard_folder_time}"),
         histogram_freq=1,
     )
     early_stopping = tf.keras.callbacks.EarlyStopping(
-        monitor="val_loss", patience=PARAMS["patience"],
-        restore_best_weights=True)
+        monitor="val_loss", patience=PARAMS["patience"], restore_best_weights=True
+    )
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        monitor="val_loss", save_best_only=True, save_weights_only=False,
-        verbose=2, filepath=str(checkpoint_path /
-        "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5"),)
+        monitor="val_loss",
+        save_best_only=True,
+        save_weights_only=False,
+        verbose=2,
+        filepath=str(
+            checkpoint_path
+            / "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5"
+        ),
+    )
 
-    callbacks = [
-        early_stopping,
-        model_checkpoint,
-        reduce_lr,
-        tensorboard_callback]
+    callbacks = [early_stopping, model_checkpoint, reduce_lr, tensorboard_callback]
 
     # Print a summary of the model architecture
     logger.info(
-        f"{PARAMS['model']}        --        {PARAMS['body_part']}        --       " +
-        f" ({PARAMS['image_size']}px ,{PARAMS['image_size']}px)")
+        f"{PARAMS['model']}        --        {PARAMS['body_part']}        --       "
+        + f" ({PARAMS['image_size']}px ,{PARAMS['image_size']}px)"
+    )
 
     # Train the model using the created datasets, callbacks, and class weights
     if not PARAMS["weights"]:
@@ -167,18 +171,24 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             PARAMS["valid_batch_size"],
             PARAMS["image_size"],
         )
-
-        history = model.fit(
-            train_dataset,
-            steps_per_epoch=train_dataset.n // PARAMS["train_batch_size"],
-            validation_data=valid_dataset,
-            use_multiprocessing=False,
-            validation_steps=valid_dataset.n // PARAMS["valid_batch_size"],
-            callbacks=callbacks,
-            epochs=PARAMS["max_epochs"],
-            class_weight=weights,
-        )
-
+        with experiment.train():
+            history = model.fit(
+                train_dataset,
+                steps_per_epoch=train_dataset.n // PARAMS["train_batch_size"],
+                validation_data=valid_dataset,
+                use_multiprocessing=False,
+                validation_steps=valid_dataset.n // PARAMS["valid_batch_size"],
+                callbacks=callbacks,
+                epochs=PARAMS["max_epochs"],
+                class_weight=weights,
+            )
+            try:
+                experiment.log_metrics(history)
+                experiment.log_remote_model(f"{PARAMS['model'].capitalize()} -*- {PARAMS['body_part']} -*- 2024", uri=f"https://sjc1.vultrobjects.com/saved-checkpoints/{PARAMS['model']}_{PARAMS['body_part']}.h5")
+            except:
+                experiment.log(history.history)
+            experiment.log_others(class_weights)
+            experiment.log_tensorboard_folder(f"tensorboard/{tensorboard_folder_time}")
         bentoml.tensorflow.save_model(
             str(f"last_{PARAMS.get('fine_tune')}_layers_trainable_" + PARAMS["model"])
             + "_"
@@ -210,8 +220,28 @@ def train(PARAMS, train_dir=None, eval_dir=None):
             PARAMS["eval_batch_size"],
             PARAMS["image_size"],
         )
-        eval = model.evaluate(eval_dataset, verbose=2)
-        logger.info(eval)
+        y_pred = model.predict(eval_dataset)
+        y_pred = (y_pred > 0.5).astype("int32")
+        y_true = eval_dataset.classes
+        x_test = []
+        import numpy as np
+        with experiment.test():
+            eval: list = model.evaluate(eval_dataset, verbose=2)
+            logger.info(eval)
+            model_metrics = {key: val for key, val in zip(model.metrics_names, eval)}
+            experiment.log_metrics(model_metrics)
+            for i in range(len(eval_dataset)):
+                x, y = eval_dataset.next()
+                x_test.extend(x)
+            x_test = np.array(x_test)
+            experiment.log_confusion_matrix(
+                y_true,
+                y_pred.flatten(),
+                images=x_test,
+                title="Confusion Matrix: Evaluation",
+                file_name="confusion-matrix-eval.json",
+            )
+    experiment.log_parameters(PARAMS)
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -253,7 +283,8 @@ def parse_arguments() -> argparse.Namespace:
         default=3e-5,
         help=(
             "The weight decay to be applied to the model being trained, if optimizer"
-            " supports it. Can be 0 or float value."),
+            " supports it. Can be 0 or float value."
+        ),
     )
     parser.add_argument(
         "-b",
@@ -276,7 +307,8 @@ def parse_arguments() -> argparse.Namespace:
         default=0.2,
         help=(
             "The split of training and validation data. 0.2 would mean 80% of training"
-            " data will be used for training and 20% will be used for validation."),
+            " data will be used for training and 20% will be used for validation."
+        ),
     )
     parser.add_argument(
         "-e",
@@ -330,7 +362,8 @@ def parse_arguments() -> argparse.Namespace:
         default="False",
         help=(
             "Argument that toggles the default dataset filepath for easier docker"
-            " deployment."),
+            " deployment."
+        ),
     )
     parser.add_argument("-T", "--weights", type=str, default=None)
     parser.add_argument(
@@ -340,7 +373,8 @@ def parse_arguments() -> argparse.Namespace:
         default=-8,
         help=(
             "Argument that toggles the default dataset filepath for easier docker"
-            " deployment."),
+            " deployment."
+        ),
     )
     parsed_args = parser.parse_args()
     return parsed_args

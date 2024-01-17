@@ -5,3 +5,6 @@ __pycache__/
 *.log
 .vscode/*
 */.vscode
+tensorboard/
+checkpoints/
+.comet.config
