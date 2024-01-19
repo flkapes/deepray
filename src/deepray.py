@@ -1,7 +1,5 @@
 import comet_ml
-
 experiment = comet_ml.Experiment(
-
 )
 import pathlib
 import os
@@ -92,7 +90,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     # Compile the model with an optimizer, loss function, and metrics
     model.compile(
         loss=focal_loss.BinaryFocalLoss(gamma=1.8),
-        optimizer="adam",
+        optimizer=tf.keras.optimizer.Adam(learning_rate=PARAMS["learning_rate"], weight_decay=PARAMS["weight_decay"]),
         metrics=[
             metrics.BinaryAccuracy(name="bacc"),
             metrics.Precision(),
@@ -113,7 +111,7 @@ def train(PARAMS, train_dir=None, eval_dir=None):
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
         monitor="val_loss",
         factor=0.12,
-        patience=2,
+        patience=PARAMS["patience"],
         min_delta=0.01,
         verbose=1,
         min_lr=0.000000000001,
