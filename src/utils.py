@@ -78,16 +78,42 @@ def get_optimizer(optimizer_name: str):
         return optim
 
 
+def get_gpu_with_most_memory():
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if not gpus:
+        return None
+
+    max_memory = 0
+    selected_gpu = None
+
+    for gpu in gpus:
+        memory_info = tf.config.experimental.get_memory_info(gpu)
+        available_memory = memory_info['current']
+        if available_memory > max_memory:
+            max_memory = available_memory
+            selected_gpu = gpu
+
+    return selected_gpu
+
+
 def set_device():
-    if tf.config.list_physical_devices("GPU"):
+    gpus = tf.config.list_physical_devices("GPU")
+    if gpus:
         print("GPU is available")
-        for i, gpu in enumerate(tf.config.list_physical_devices("GPU")):
-            try:
-                tf.config.experimental.set_visible_devices(
-                    [], f"/device:GPU:{i}")
-                tf.config.experimental.set_memory_growth(gpu, True)
-            except RuntimeError as e:
-                print(e)
+        if len(gpus) > 1:
+            selected_gpu = get_gpu_with_most_memory()
+            if selected_gpu:
+                tf.config.experimental.set_visible_devices(selected_gpu, 'GPU')
+                tf.config.experimental.set_memory_growth(selected_gpu, True)
+                print(f"Using GPU with most memory: {selected_gpu}")
+        else:
+            for i, gpu in enumerate(tf.config.list_physical_devices("GPU")):
+                try:
+                    tf.config.experimental.set_visible_devices(
+                        [], f"/device:GPU:{i}")
+                    tf.config.experimental.set_memory_growth(gpu, True)
+                except RuntimeError as e:
+                    print(e)
         return "mixed_float16"
     elif "COLAB_TPU_ADDR" in os.environ:
         print("TPU is available")
