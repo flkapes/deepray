@@ -8,10 +8,15 @@ from sklearn.preprocessing import MultiLabelBinarizer
 import logging
 import logging.config
 import json
+import os
 
-with open("logging_config.json", "r") as config_file:
-    config_dict = json.load(config_file)
-
+try:
+    with open("logging_config.json", "r") as config_file:
+        config_dict = json.load(config_file)
+except:
+    with open(os.environ["logging"], "r") as config_file:
+        config_dict = json.load(config_file)
+        
 logging.config.dictConfig(config_dict)
 logger = logging.getLogger(__name__)
 

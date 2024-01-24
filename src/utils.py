@@ -9,8 +9,12 @@ import logging
 import logging.config
 import json
 
-with open("logging_config.json", "r") as config_file:
-    config_dict = json.load(config_file)
+try:
+    with open("logging_config.json", "r") as config_file:
+        config_dict = json.load(config_file)
+except:
+    with open(os.environ["logging"], "r") as config_file:
+        config_dict = json.load(config_file)
 logging.config.dictConfig(config_dict)
 logger = logging.getLogger(__name__)
 
@@ -23,6 +27,17 @@ def get_next_folder_name(
         folder_root_path: str,
         model_name: str,
         bone_type: str):
+    """
+    Returns the highest number found in the filenames of a specific path.
+
+    Args:
+        folder_root_path (str): The root path of the folder.
+        model_name (str): The name of the model.
+        bone_type (str): The type of bone.
+
+    Returns:
+        int: The highest number found in the filenames of the specified path.
+    """
     path = os.path.join(folder_root_path, bone_type, model_name)
     maxn = 0
     try:
@@ -79,6 +94,13 @@ def get_optimizer(optimizer_name: str):
 
 
 def set_device():
+    """
+    Sets the device to be used for training. If a GPU is available, it sets the
+    visible devices to GPU and sets memory growth to True. If a TPU is
+    available, it connects to the TPU and initializes the TPU system. If neither
+    GPU nor TPU is available, it sets the visible devices to CPU. Returns the
+    dtype for mixed precision training.
+    """
     if tf.config.list_physical_devices("GPU"):
         print("GPU is available")
         for i, gpu in enumerate(tf.config.list_physical_devices("GPU")):
@@ -108,6 +130,18 @@ def set_device():
 
 
 def check_dropout_range(dropout):
+    """
+    Check if the dropout rate is within the valid range of 0 and 1.
+
+    Args:
+        dropout (int): The dropout rate to be checked.
+
+    Returns:
+        int: The input dropout rate if it is valid.
+
+    Raises:
+        InvalidDropoutRateException: If the dropout rate is invalid.
+    """
     if not 0 <= dropout <= 1:
         logger.error(
             f"Invalid Dropout Rate: {dropout}. Must be between 0 and 1.")
@@ -117,6 +151,18 @@ def check_dropout_range(dropout):
 
 
 def check_regularizer(regularizer):
+    """
+    Check if the regularizer is valid and return it.
+
+    Args:
+        regularizer (str): The type of regularizer to be checked.
+
+    Returns:
+        str: The valid regularizer.
+
+    Raises:
+        InvalidRegularizerException: If the regularizer is not valid.
+    """
     valid_regularizers = ["l1", "l2", "l1_l2"]
     if regularizer not in valid_regularizers:
         logger.error(
@@ -131,6 +177,18 @@ def check_regularizer(regularizer):
 
 
 def check_seed(seed):
+    """
+    Check if the input seed is an integer and return it.
+
+    Args:
+        seed (int): the seed value to be checked
+
+    Returns:
+        int: the input seed if it is an integer
+
+    Raises:
+        InvalidSeedValueException: if the input seed is not an integer
+    """
     if not isinstance(seed, int):
         logger.error(f"Invalid Seed Value: {seed}. Must be an integer.")
         raise InvalidSeedValueException("Seed value must be an integer.")
@@ -138,6 +196,16 @@ def check_seed(seed):
 
 
 def check_trainable_layers(trainable_layers):
+    """
+    Check if the input trainable_layers is an integer and return it.
+
+    Args:
+        trainable_layers (int): the number of trainable layers
+    Returns:
+        int: the number of trainable layers
+    Raises:
+        InvalidTrainableLayersException: if trainable_layers is not an integer
+    """
     if not isinstance(trainable_layers, int):
         logger.error(
             f"Invalid Trainable Layers: {trainable_layers}. Must be an integer."
@@ -148,6 +216,18 @@ def check_trainable_layers(trainable_layers):
 
 
 def check_image_size(image_size):
+    """
+    Validates the given image size.
+
+    Args:
+        image_size (int): The size of the image to be validated.
+
+    Returns:
+        int: The validated image size.
+
+    Raises:
+        InvalidImageSizeException: If the image size is not an integer or not within the valid range.
+    """
     if not isinstance(image_size, int):
         logger.error(f"Invalid Image Size: {image_size}. Must be an integer.")
         raise InvalidImageSizeException("Image size must be an integer.")
@@ -160,6 +240,19 @@ def check_image_size(image_size):
 
 
 def check_model_name(model_name, model_dict):
+    """
+    Check if the model name exists in the model dictionary and raise an exception if not found.
+
+    Args:
+        model_name (str): The name of the model to check.
+        model_dict (dict): A dictionary containing available model names.
+
+    Returns:
+        str: The model name if it exists in the dictionary.
+
+    Raises:
+        ModelNotFoundException: If the model name is not found in the dictionary.
+    """
     if model_name not in model_dict():
         logger.error(
             f"Model Not Found: {model_name}. Available models:"
@@ -172,6 +265,18 @@ def check_model_name(model_name, model_dict):
 
 
 def check_dataset_type(dataset_type):
+    """
+    Check the dataset type and raise an exception if it is not 'train', 'valid', or 'eval'.
+
+    Args:
+        dataset_type (str): The type of dataset to check.
+
+    Returns:
+        str: The dataset type if it is valid.
+
+    Raises:
+        InvalidDatasetTypeException: If the dataset type is not 'train', 'valid', or 'eval'.
+    """
     if dataset_type not in ["train", "valid", "eval"]:
         logger.error(
             f"Invalid Dataset Type: {dataset_type}. Valid types: 'train', 'valid',"
@@ -183,6 +288,18 @@ def check_dataset_type(dataset_type):
 
 
 def check_batch_size(batch_size):
+    """
+    Check the batch size for validity and return it if valid.
+
+    Args:
+        batch_size (int): The batch size to be checked.
+
+    Returns:
+        int: The valid batch size.
+
+    Raises:
+        InvalidBatchSizeException: If the batch size is not an integer.
+    """
     if not isinstance(batch_size, int):
         logger.error(f"Invalid Batch Size: {batch_size}. Must be an integer.")
         raise InvalidBatchSizeException("Batch size must be an integer.")
@@ -190,6 +307,18 @@ def check_batch_size(batch_size):
 
 
 def check_data_dir(data_dir):
+    """
+    Check if the data directory exists and is a directory.
+
+    Args:
+        data_dir (str): The path to the data directory.
+
+    Returns:
+        str: The validated data directory path.
+
+    Raises:
+        InvalidDataDirException: If the data directory does not exist or is not a directory.
+    """
     if not os.path.exists(data_dir):
         logger.error(f"Data Directory Does Not Exist: {data_dir}")
         raise InvalidDataDirException("Data directory does not exist.")
@@ -200,6 +329,15 @@ def check_data_dir(data_dir):
 
 
 def check_validation_split_value(valid_split_value):
+    """
+    Check the validation split value.
+
+    Args:
+        valid_split_value (float) The value to be validated
+        
+    Returns:
+        float: The validated split value, or None if the input is not valid
+    """
     if not 0 <= valid_split_value <= 1:
         logger.error(
             f"Invalid Validation Split Value: {valid_split_value}. Must be between 0"

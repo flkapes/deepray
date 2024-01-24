@@ -4,10 +4,13 @@ import logging
 import logging.config
 import json
 import skimage.exposure
-
-with open("logging_config.json", "r") as config_file:
-    config_dict = json.load(config_file)
-
+import os
+try:
+    with open("logging_config.json", "r") as config_file:
+        config_dict = json.load(config_file)
+except:
+    with open(os.environ["logging"], "r") as config_file:
+        config_dict = json.load(config_file)
 logging.config.dictConfig(config_dict)
 
 # Create a logger
@@ -73,7 +76,8 @@ def apply_morphology(image: np.ndarray, kernel_size: int = 18) -> np.ndarray:
     """
     if kernel_size <= 0:
         raise ValueError("Kernel size must be a positive integer.")
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size, kernel_size))
+    kernel = cv2.getStructuringElement(
+        cv2.MORPH_RECT, (kernel_size, kernel_size))
     return cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
 
 

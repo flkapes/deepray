@@ -5,3 +5,9 @@ __pycache__/
 *.log
 .vscode/*
 */.vscode
+.comet.config
+source/
+build/
+Makefile
+make.bat
+

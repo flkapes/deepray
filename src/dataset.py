@@ -3,6 +3,7 @@ import tensorflow as tf
 import remove_labels
 import logging
 import logging.config
+import os
 import json
 from utils import (
     check_image_size,
@@ -15,9 +16,12 @@ from utils import (
 )
 from models import list_models
 
-with open("logging_config.json", "r") as config_file:
-    config_dict = json.load(config_file)
-
+try:
+    with open("logging_config.json", "r") as config_file:
+        config_dict = json.load(config_file)
+except:
+    with open(os.environ["logging"], "r") as config_file:
+        config_dict = json.load(config_file)
 logging.config.dictConfig(config_dict)
 
 # Create a logger

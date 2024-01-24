@@ -20,8 +20,12 @@ from models import get_configured_model
 from utils import set_device, get_next_folder_name
 
 # Set up logging configuration
-with open("logging_config.json", "r") as config_file:
-    config_dict = json.load(config_file)
+try:
+    with open("logging_config.json", "r") as config_file:
+        config_dict = json.load(config_file)
+except:
+    with open(os.environ["logging"], "r") as config_file:
+        config_dict = json.load(config_file)
 
 logging.config.dictConfig(config_dict)
 pil_logger = logging.getLogger("PIL")
@@ -127,9 +131,14 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         monitor="val_loss", patience=PARAMS["patience"],
         restore_best_weights=True)
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        monitor="val_loss", save_best_only=True, save_weights_only=False,
-        verbose=2, filepath=str(checkpoint_path /
-        "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5"),)
+        monitor="val_loss",
+        save_best_only=True,
+        save_weights_only=False,
+        verbose=2,
+        filepath=str(
+            checkpoint_path /
+            "{epoch:04d}--VLoss{val_loss:04f}-Recall{val_recall:04f}-Precision{val_precision:0.4f}.h5"),
+    )
 
     callbacks = [
         early_stopping,
@@ -180,7 +189,8 @@ def train(PARAMS, train_dir=None, eval_dir=None):
         )
 
         bentoml.tensorflow.save_model(
-            str(f"last_{PARAMS.get('fine_tune')}_layers_trainable_" + PARAMS["model"])
+            str(f"last_{PARAMS.get('fine_tune')}_layers_trainable_" +
+                PARAMS["model"])
             + "_"
             + PARAMS["body_part"],  # +"_"+str(time.time()),
             model,

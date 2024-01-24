@@ -9,6 +9,7 @@ import tensorflow as tf
 import tensorflow.keras.applications as models
 from tensorflow.keras.layers import Dense, CenterCrop, Dropout, LeakyReLU
 from tensorflow.keras.initializers import GlorotUniform
+import os
 from tensorflow.keras import Sequential
 
 from utils import (
@@ -20,8 +21,13 @@ from utils import (
     check_trainable_layers,
 )
 
-with open("logging_config.json", "r") as config_file:
-    config_dict = json.load(config_file)
+try:
+    with open("logging_config.json", "r") as config_file:
+        config_dict = json.load(config_file)
+except:
+    with open(os.environ["logging"], "r") as config_file:
+        config_dict = json.load(config_file)
+
 logging.config.dictConfig(config_dict)
 logger = logging.getLogger(__name__)
 
